@@ -1,9 +1,9 @@
-### 1. Crie Security Groups para os VPC Endpoints e para a quarentena
+### 1. Create federated access to AWS with ADFS
 <details closed>
 <summary><strong>(abrir detalhes)</strong></summary>
 <br />
 
-Nesta seção você criará políticas de firewall Security Groups para comunicação das instancias com os VPC Endpoints dos serviços AWS Systems Manager e Session Manager e para isolamento de instâncias Amazon EC2 comprometidas.
+En esta parte se hara la federación de acceso a AWS...
 
 - __1.1.__ Abra el servicio [EC2](https://console.aws.amazon.com/ec2/home) en una nueva pestaña o ventana
 
