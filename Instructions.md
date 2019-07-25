@@ -6,7 +6,7 @@
 </details>
 
 ### 1. Cree un VPC con subnets para hostear sus recursos que usan servicios del CloudHSM
-<details closed>
+<details open>
 <summary><strong>(abrir detalles)</strong></summary>
 <br />
 
@@ -17,7 +17,7 @@
 - __1.5.__ Tome nota del VPC Id que fue creado, y de las 6 subnets
 
 ### 2. Cree un cluster de CloudHSM
-<details closed>
+<details open>
 <summary><strong>(abrir detalles)</strong></summary>
 <br />
 
@@ -27,7 +27,7 @@
 - __2.4.__ La creación del cluster puede llevar hasta 10 minutos.
 
 ### 3. Cree un bucket S3 para almacenamiento de objetos
-<details closed>
+<details open>
 <summary><strong>(abrir detalles)</strong></summary>
 <br />
 
