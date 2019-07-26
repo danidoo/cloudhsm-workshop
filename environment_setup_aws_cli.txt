@@ -1,0 +1,80 @@
+! Create VPC
+aws ec2 create-vpc --cidr-block 10.0.0.0/16
+aws ec2 modify-vpc-attribute --enable-dns-hostnames --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-tags --resources vpc-07a9faf2c1614e73d --tags Key=Name,Value=cloudhsm-vpc
+
+! Create protected subnets for CloudHSM Cluster
+aws ec2 describe-availability-zones
+aws ec2 create-subnet --availability-zone us-east-1a --cidr-block 10.0.0.0/24 --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-subnet --availability-zone us-east-1b --cidr-block 10.0.1.0/24 --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-subnet --availability-zone us-east-1c --cidr-block 10.0.2.0/24 --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-subnet --availability-zone us-east-1d --cidr-block 10.0.3.0/24 --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-subnet --availability-zone us-east-1e --cidr-block 10.0.4.0/24 --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-subnet --availability-zone us-east-1f --cidr-block 10.0.5.0/24 --vpc-id vpc-07a9faf2c1614e73d
+
+! Create private subnets for managing the CloudHSMs and publishing the web servers
+aws ec2 create-subnet --availability-zone us-east-1a --cidr-block 10.0.128.0/24 --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-subnet --availability-zone us-east-1b --cidr-block 10.0.129.0/24 --vpc-id vpc-07a9faf2c1614e73d
+
+aws ec2 create-tags --resources subnet-0a30bdd07fdc1e69b --tags Key=Name,Value=private-subnet-us-east-1a
+aws ec2 create-tags --resources subnet-0ac70c40c00f8aefa --tags Key=Name,Value=private-subnet-us-east-1b
+
+! Create Security Groups for VPC Endpoints
+aws ec2 create-security-group --group-name vpc-endpoints --description "For communication with VPC Endpoints" --vpc-id vpc-07a9faf2c1614e73d
+sg-0858cbff765a91bb6
+aws ec2 authorize-security-group-ingress --group-id sg-0858cbff765a91bb6 --source-group sg-0858cbff765a91bb6 --protocol tcp --port 443
+
+
+! Create VPC Endpoints to manage EC2 instances through Session Manager
+aws ec2 describe-vpc-endpoint-services
+aws ec2 create-vpc-endpoint --vpc-endpoint-type Interface --private-dns-enabled --service-name com.amazonaws.us-east-1.ec2 --security-group-ids sg-0858cbff765a91bb6 --vpc-id vpc-07a9faf2c1614e73d --subnet-ids subnet-0a30bdd07fdc1e69b subnet-0ac70c40c00f8aefa
+aws ec2 create-vpc-endpoint --vpc-endpoint-type Interface --private-dns-enabled --service-name com.amazonaws.us-east-1.ec2messages --security-group-ids sg-0858cbff765a91bb6 --vpc-id vpc-07a9faf2c1614e73d --subnet-ids subnet-0a30bdd07fdc1e69b subnet-0ac70c40c00f8aefa
+
+aws ec2 create-vpc-endpoint --vpc-endpoint-type Interface --private-dns-enabled --service-name com.amazonaws.us-east-1.ssm --security-group-ids sg-0858cbff765a91bb6 --vpc-id vpc-07a9faf2c1614e73d --subnet-ids subnet-0a30bdd07fdc1e69b subnet-0ac70c40c00f8aefa
+aws ec2 create-vpc-endpoint --vpc-endpoint-type Interface --private-dns-enabled --service-name com.amazonaws.us-east-1.ssmmessages --security-group-ids sg-0858cbff765a91bb6 --vpc-id vpc-07a9faf2c1614e73d --subnet-ids subnet-0a30bdd07fdc1e69b subnet-0ac70c40c00f8aefa
+
+! Create public subnets for managing the CloudHSMs and publishing the web servers
+aws ec2 create-subnet --availability-zone us-east-1a --cidr-block 10.0.192.0/24 --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-subnet --availability-zone us-east-1b --cidr-block 10.0.193.0/24 --vpc-id vpc-07a9faf2c1614e73d
+
+aws ec2 create-tags --resources subnet-00992340812202da8 --tags Key=Name,Value=public-subnet-us-east-1a
+aws ec2 create-tags --resources subnet-07910884b698ecdce --tags Key=Name,Value=public-subnet-us-east-1b
+
+! Create and attach internet gateway to VPC
+aws ec2 create-internet-gateway
+aws ec2 attach-internet-gateway --internet-gateway-id igw-0ef3c0a5c2ae16ee4 --vpc-id vpc-07a9faf2c1614e73d
+
+! Set Subnets for auto public IP assignment
+aws ec2 modify-subnet-attribute --map-public-ip-on-launch --subnet-id subnet-00992340812202da8
+aws ec2 modify-subnet-attribute --map-public-ip-on-launch --subnet-id subnet-07910884b698ecdce
+
+! Allocate Elastic IP and create NAT Gateway
+aws ec2 allocate-address
+aws ec2 create-nat-gateway --allocation-id eipalloc-0423bdf5418f40dfb --subnet-id subnet-00992340812202da8
+
+aws ec2 allocate-address
+aws ec2 create-nat-gateway --allocation-id eipalloc-00df17fa1f6b44516 --subnet-id subnet-07910884b698ecdce
+
+nat-025327e03b1f1a50c
+nat-01fd4a4b8765a1705
+
+! Create Route Table for public subnet
+aws ec2 create-route-table --vpc-id vpc-07a9faf2c1614e73d
+aws ec2 create-tags --resources rtb-07e0b27652c03ce05 --tags Key=Name,Value=public-route-table
+aws ec2 create-route --destination-cidr-block 0.0.0.0/0 --gateway-id igw-0ef3c0a5c2ae16ee4 --route-table-id rtb-07e0b27652c03ce05
+aws ec2 associate-route-table --route-table-id rtb-07e0b27652c03ce05 --subnet-id subnet-00992340812202da8
+aws ec2 associate-route-table --route-table-id rtb-07e0b27652c03ce05 --subnet-id subnet-07910884b698ecdce
+
+! Create IAM Role for SSM on EC2
+
+! Create Route Table for private subnet
+aws ec2 create-route-table --vpc-id vpc-07a9faf2c1614e73d
+rtb-0d8765727a36a5ad1
+aws ec2 create-tags --resources rtb-0d8765727a36a5ad1 --tags Key=Name,Value=private-route-table
+aws ec2 create-route --destination-cidr-block 0.0.0.0/0 --nat-gateway-id nat-025327e03b1f1a50c --route-table-id rtb-0d8765727a36a5ad1
+aws ec2 associate-route-table --route-table-id rtb-0d8765727a36a5ad1 --subnet-id subnet-0a30bdd07fdc1e69b
+aws ec2 associate-route-table --route-table-id rtb-0d8765727a36a5ad1 --subnet-id subnet-0ac70c40c00f8aefa
+
+! Create CloudHSM Cluster
+
+! 
