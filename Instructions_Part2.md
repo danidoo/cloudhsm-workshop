@@ -1,20 +1,124 @@
-## AWS CloudHSM
+## AWS CloudHSM - Part II - Managing Keys
 <details open>
 <summary><strong>(abrir detalles)</strong></summary>
 <br />
 
 </details>
 
-### 1. Cree un VPC con subnets para hostear sus recursos que usan servicios del CloudHSM
+### 1. Creando llaves en el HSM
 <details open>
 <summary><strong>(abrir detalles)</strong></summary>
 <br />
+En este modulo "you will be using key_mgmt_util software provided in cloudHSM Client package to create symmmetric keys, RSA Key pair and ECC key pair."
 
-- __1.1.__ En un navegador, abra el sitio <CFN_Github>
-- __1.2.__ Haga click en **Raw** e descargue el archivo a su maquina con el nombre cloudhsm-landing-zone.json.
-- __1.3.__ Abra la Consola de AWS, en el servicio CloudFormation.
-- __1.4.__ Implemente el ambiente de inicio usando el servicio CloudFormation con el archivo descargado.
-- __1.5.__ Tome nota del VPC Id que fue creado, y de las 6 subnets
+- __1.1.__ Vuelva a la pestaña o ventana del navegador del [AWS Systems Manager](https://console.aws.amazon.com/ssm/home) en la terminal de la instancia
+- __1.1.__ Conectese al 
+```
+sudo systemctl start cloudhsm-client
+```
+
+- __1.1.__ Conectese al 
+```
+./key_mgmt_util
+```
+
+- __1.1.__ 
+```
+loginHSM -u CU -s user1 -p defaultPassword
+```
+
+- __1.1.__ 
+```
+genSymKey -t 31 -s 32 -l aes256
+```
+
+- __1.1.__ 
+```
+genRSAKeyPair -m 2048 -e 65541 -l rsa_test
+```
+
+- __1.1.__ 
+```
+genECCKeyPair -i 12 -l ecc12
+```
+
+- __1.1.__ 
+```
+exit
+```
+
+### 2. Importando llaves al HSM
+<details open>
+<summary><strong>(abrir detalles)</strong></summary>
+<br />
+En este modulo "you will be using key_mgmt_util software provided in cloudHSM Client package to import symmetric keys, export symmetric keys and wrap keys."
+
+- __2.1.__ Vuelva a la pestaña o ventana del navegador del [AWS Systems Manager](https://console.aws.amazon.com/ssm/home) en la terminal de la instancia
+- __2.1.__ The first command uses OpenSSL to generate a random 256-bit AES symmetric key. It saves the key in the aes256.key file.
+```
+openssl rand -out aes256-forImport.key 32
+```
+
+- __2.1.__ Conectese al 
+```
+./key_mgmt_util
+```
+
+- __1.1.__ 
+```
+loginHSM -u CU -s user1 -p defaultPassword
+```
+
+- __1.1.__ Generate a wrapping key on the HSM and take note of the key handle returned.You will reuire it in the below exercises.
+```
+genSymKey -t 31 -s 32 -l wrappinhKey
+```
+
+- __1.1.__ Use the imSymKey to import the AES key from the aes256.key file into the HSMs.
+```
+imSymKey -f aes256.key -w <wrapping key handle> -t 31 -l imported
+```
+
+- __1.1.__ Generate a 3DES key and note the key handle returned. This key will be exported later
+```
+genSymKey -t 21 -s 24 -l 3DES_export
+```
+
+- __1.1.__ This command exports a Triple DES (3DES) symmetric key (key handle -k). It uses an existing AES key (key handle -w) in the HSM as the wrapping key. Then it writes the plaintext of the 3DES key to the 3DES.key file.
+```
+exSymKey -k <handle for 3DES key> -w <wrapping key handle> -out 3DES.key
+```
+
+- __1.1.__ 
+```
+openssl enc -d -aes-256-cbc -in plain.txt -out encr.txt -pass file:./3DES.key
+```
+
+- __1.1.__ 
+```
+
+```
+
+- __1.1.__ 
+```
+
+```
+
+- __1.1.__ 
+```
+
+```
+
+- __1.1.__ 
+```
+
+```
+
+- __1.1.__ 
+```
+
+```
+
 
 ### 2. Cree un cluster de CloudHSM
 <details open>
@@ -185,10 +289,12 @@ sudo cp customerCA.crt /opt/cloudhsm/etc/customerCA.crt
 
 - __10.1.__ 
 ```
+echo '#!/bin/sh' >> cloudhsm_client.sh
+echo '/opt/cloudhsm/bin/cloudhsm_client /opt/cloudhsm/etc/cloudhsm_client.cfg' >> cloudhsm_client.sh
+chmod +x cloudhsm_client.sh
 echo '#!/bin/sh' >> cloudhsm_mgmt_util.sh
 echo '/opt/cloudhsm/bin/cloudhsm_mgmt_util /opt/cloudhsm/etc/cloudhsm_mgmt_util.cfg' >> cloudhsm_mgmt_util.sh
 chmod +x cloudhsm_mgmt_util.sh
-ln -s /opt/cloudhsm/bin/key_mgmt_util key_mgmt_util
 ```
 
 - __10.1.__ Vea la dirección IP del HSM en el cluster con el comando:
@@ -240,15 +346,9 @@ loginHSM PRECO admin password
 changePswd PRECO admin <NewPassword>
 ```
 
-- __11.1.__ Do you want to continue(y/n)? -> y
 - __11.1.__ 
 ```
 listUsers
-```
-
-- __11.1.__ Use the “createUser“ command to create a crypto user (CU).
-```
-createUser CU user1 defaultPassword
 ```
 
 - __11.1.__ 
