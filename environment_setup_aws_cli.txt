@@ -22,7 +22,7 @@ aws ec2 create-tags --resources subnet-0ac70c40c00f8aefa --tags Key=Name,Value=p
 ! Create Security Groups for VPC Endpoints
 aws ec2 create-security-group --group-name vpc-endpoints --description "For communication with VPC Endpoints" --vpc-id vpc-07a9faf2c1614e73d
 sg-0858cbff765a91bb6
-aws ec2 authorize-security-group-ingress --group-id sg-0858cbff765a91bb6 --source-group sg-0858cbff765a91bb6 --protocol tcp --port 443
+aws ec2 authorize-security-group-ingress --group-id sg-0858cbff765a91bb6 --cidr '10.0.0.0/16' --protocol tcp --port 443
 
 
 ! Create VPC Endpoints to manage EC2 instances through Session Manager
